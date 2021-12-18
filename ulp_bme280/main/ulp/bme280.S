@@ -158,8 +158,12 @@ wakeup_reason:
 	.long 0
 
 	//wakeup counter
-	.global cnt_wakeup
-cnt_wakeup:
+	.global cnt_force_wakeup
+cnt_force_wakeup:
+	.long 0
+
+	.global cycles
+cycles:
 	.long 0
 
 //Code-Section -------------------------------------------------
@@ -167,6 +171,12 @@ cnt_wakeup:
 	.text
 	.global entry
 entry:
+	//increment cycle counter
+	move r1, cycles
+	ld r0, r1, 0
+	add r0, r0, 1		//16bit overflow !!!
+	st r0, r1, 0
+
 	//Reset error-flag
 	move r1, 0
 	move r2, com_err
@@ -246,7 +256,7 @@ k1:
 	jump wr_byte
 	RD_ACK
 	WR_STOP
-
+	//multibyte reading
 	WR_START
 	move r0, DEV_RD_ADDR
 	ret_r3
@@ -288,7 +298,7 @@ k1:
 	WR_STOP
 
 	//check counter for wake_up
-	move r2, cnt_wakeup
+	move r2, cnt_force_wakeup
 	ld r0, r2, 0
 	move r1, 0		//wakeup-reason
 	sub r0, r0, 1
@@ -350,13 +360,18 @@ exit_error:
 	st r1, r2, 0
 	move r1, 0x0F
 exit_wake:
+	// Read RTC_CNTL_RDY_FOR_WAKEUP bit
+	READ_RTC_FIELD(RTC_CNTL_LOW_POWER_ST_REG, RTC_CNTL_RDY_FOR_WAKEUP)
+	AND r0, r0, 1
+	JUMP exit_wake, eq    // Retry until the bit is set
+
 	move r3, wakeup_reason
 	st r1, r3, 0
 	wake
 
 exit_halt:
 	SDA_H
-	halt
+	halt		//wake ulp
 
 
 

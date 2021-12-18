@@ -30,6 +30,8 @@
 
 #define CNT_WAKEUP	10
 
+RTC_DATA_ATTR uint32_t cycles = 0;
+
 i2c_port_t i2c_mport = -1;
 
 extern const uint8_t ulp_main_bin_start[] asm("_binary_ulp_main_bin_start");
@@ -100,7 +102,12 @@ i2c_port_t i2c_master_init()
 	return mport;
 }
 
-
+// Wakeup-Stub - run after wake before boot
+void RTC_IRAM_ATTR esp_wake_deep_sleep(void) {
+ 	//Extra Delay in Wakeup Stub -> s. SDK-Config/ESP32-specific 0..5000µs
+ 	esp_default_wake_deep_sleep();
+ 	cycles++;
+}
 
 void app_main(void)
 {
@@ -125,17 +132,20 @@ void app_main(void)
         		start_ulp_program();
         	}
     } else {
-        printf("ULP wakeup reason: %d\n", ulp_wakeup_reason & 0xFFFF);
-        ulp_cnt_wakeup = CNT_WAKEUP;
+        printf("ULP wakeup reason: %d\nmain cycles: %d\n", ulp_wakeup_reason & 0xFFFF, cycles);
+        ulp_cnt_force_wakeup = CNT_WAKEUP;
+        printf("ulp cycles : %d\n", ulp_cycles & 0xFFFF);
 
         struct bme280_uncomp_data uncomp_data = { 0 };
         uint8_t mreg[8];
         uint32_t* pmres = &ulp_mraw;
 
+        printf("raw data  =>    ");
         for (int i = 0; i<8; i++){
         	mreg[i] = (uint8_t) *pmres;
         	pmres++;
         	printf("0x%.2X ", mreg[i]);
+        	if ((i == 2) || (i == 5)) printf("| ");
         }
         printf("\n");
         bme280_parse_sensor_data(mreg, &uncomp_data);
@@ -143,11 +153,8 @@ void app_main(void)
 
         struct bme280_data comp_data;
         bme280_i2c_get_result(&uncomp_data, &comp_data);
-        printf("comp data => Press: %fhPa | Temp: %f°C | Hum: %f%%\n",
+        printf("comp data => Press: %.2fhPa |  Temp: %.2f°C | Hum: %.2f%%\n",
         		comp_data.pressure / 100.0, comp_data.temperature, comp_data.humidity);
-        printf("uncomp data =>Press: %.6X | Temp: %.6X | Hum: %.4X  \n",
-        		uncomp_data.pressure, uncomp_data.temperature, uncomp_data.humidity);
-
 
         //Offset-Calc for next wakeup (sleep-window)
         //two-point calculation
@@ -175,11 +182,11 @@ void app_main(void)
         *plimit = (uint32_t)(uncomp_data.humidity +    (round(DHUM/dhum)));
 
         plimit = &ulp_limit;
-        printf("Limit Press: 0x%.4X | ", *plimit); plimit++;
+        printf("Limit Press: 0x%.4X < > ", *plimit); plimit++;
         printf("0x%.4X\n",  *plimit);              plimit++;
-        printf("Limit Temp:  0x%.4X | ", *plimit); plimit++;
+        printf("Limit Temp:  0x%.4X < > ", *plimit); plimit++;
         printf("0x%.4X\n",  *plimit);              plimit++;
-        printf("Limit Humi:  0x%.4X | ", *plimit); plimit++;
+        printf("Limit Humi:  0x%.4X < > ", *plimit); plimit++;
         printf("0x%.4X\n",  *plimit);
 
     }

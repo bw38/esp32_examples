@@ -13,7 +13,7 @@
 
 #include "bme280_i2c_if.h"
 
-#define DEBUG_I2C
+#define DEBUG_I2C_NO
 
 //interne Varibalen
 RTC_DATA_ATTR static struct bme280_dev bme280_device;
