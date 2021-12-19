@@ -23,9 +23,4 @@ typedef struct {
 extern esp_err_t bme280_i2c_init(uint8_t i2c_addr, i2c_port_t _i2c_mport, bool wu);
 extern esp_err_t bme280_i2c_get_result (struct bme280_uncomp_data *uncomp_data, struct bme280_data *comp_data);
 
-//extern int8_t bme280_i2c_config();
-
-//extern void bme280_i2c_start(QueueHandle_t hQ, uint32_t flag);
-//extern bme280_result_t bme280_i2c_get_result();
-
 #endif /* MAIN_BME280_I2C_IF_H_ */
