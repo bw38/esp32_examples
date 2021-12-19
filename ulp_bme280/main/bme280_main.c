@@ -150,10 +150,9 @@ void app_main(void)
         printf("\n");
         bme280_parse_sensor_data(mreg, &uncomp_data);
 
-
         struct bme280_data comp_data;
         bme280_i2c_get_result(&uncomp_data, &comp_data);
-        printf("comp data => Press: %.2fhPa |  Temp: %.2f°C | Hum: %.2f%%\n",
+        printf("comp data => Press: %7.2fhPa |  Temp: %5.2f°C | Hum: %.2f%%\n",
         		comp_data.pressure / 100.0, comp_data.temperature, comp_data.humidity);
 
         //Offset-Calc for next wakeup (sleep-window)
@@ -161,7 +160,7 @@ void app_main(void)
         //1.point = last result
         //2.point = last result + offset
         struct bme280_data comp_data2;
-        const uint16_t moffs = 0x100;			//fix offset for delta-calc
+        const uint16_t moffs = 0x1000;			//fix offset for delta-calc
         uncomp_data.pressure    += moffs;
         uncomp_data.humidity    += moffs;
         bme280_i2c_get_result(&uncomp_data, &comp_data2);
