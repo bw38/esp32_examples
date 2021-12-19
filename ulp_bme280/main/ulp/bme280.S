@@ -218,7 +218,10 @@ entry:
 	WR_STOP
 
 	//wait for ready
-k0:	wait 16000	//delay 2ms
+	move r2, 250		//loop counter
+k0:	sub r2, r2, 1
+	jump exit_error, eq //timeout
+	wait 16000			//delay 2ms
 	WR_START
 	move r0, DEV_WR_ADDR
 	ret_r3
@@ -243,7 +246,6 @@ k0:	wait 16000	//delay 2ms
 	jump k1, eq			//ready
 	jump k0				//not ready yet
 
-
 k1:
 	//read measure-results
 	WR_START
@@ -265,6 +267,7 @@ k1:
 	move r2, mraw	//R2 -> result-var
 	ret_r3
 	jump rd_byte
+	jump exit_error, eq //press_msb == 0 not valid
 	WR_ACK
 	st r0, r2, 0	//press_msb	0xF7
 	ret_r3
@@ -358,7 +361,7 @@ exit_error:
 	move r1, 1		//set error-flag
 	move r2, com_err
 	st r1, r2, 0
-	move r1, 0x0F
+	move r1, 0x0F	//wakeup-reason
 exit_wake:
 	// Read RTC_CNTL_RDY_FOR_WAKEUP bit
 	READ_RTC_FIELD(RTC_CNTL_LOW_POWER_ST_REG, RTC_CNTL_RDY_FOR_WAKEUP)
@@ -392,6 +395,7 @@ w1:	lsh r0, r0, 1		//shift next bit
 	jump r3
 
 //Read 8 Bit -> R0, start MSB
+//return EQ if R0 = 0x00
 //R1 changed, R3 return-Addr
 rd_byte:
 	move r1, 0x00

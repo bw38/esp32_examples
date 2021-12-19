@@ -10,6 +10,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #include "esp_sleep.h"
 #include "nvs.h"
 #include "nvs_flash.h"
@@ -113,10 +116,10 @@ void app_main(void)
 {
     esp_sleep_wakeup_cause_t cause = esp_sleep_get_wakeup_cause();
     if (cause != ESP_SLEEP_WAKEUP_ULP) {
-        printf("Not ULP wakeup\n");
+        printf("\n----------Cold-Start -------------\n");
 
         i2c_mport = i2c_master_init();
-        if (i2c_mport >= 0)
+        if (i2c_mport >= 0) {
         	if (bme280_i2c_init(DEV_ADDR, i2c_mport, false) == ESP_OK) {
         		printf("BME280 Init Ok\n");
         		rtc_io_init();
@@ -130,12 +133,20 @@ void app_main(void)
         		ulp_config = 	BME280_FILTER_COEFF_OFF << 2;	//filter
 
         		start_ulp_program();
+        	} else {
+        		printf("Communication Error with BME280\n");
         	}
+        }
     } else {
         printf("ULP wakeup reason: %d\nmain cycles: %d\n", ulp_wakeup_reason & 0xFFFF, cycles);
         ulp_cnt_force_wakeup = CNT_WAKEUP;
         printf("ulp cycles : %d\n", ulp_cycles & 0xFFFF);
 
+        if ((ulp_com_err & 0xFFFF) != 0) {
+        	printf("ULP-I2C-Communication Error - Restart in 5sek\n");
+        	vTaskDelay(5000 / portTICK_PERIOD_MS);
+        	esp_restart();
+        }
         struct bme280_uncomp_data uncomp_data = { 0 };
         uint8_t mreg[8];
         uint32_t* pmres = &ulp_mraw;
