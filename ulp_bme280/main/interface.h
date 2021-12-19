@@ -14,7 +14,7 @@
 //Ports in GPIO-Matrix
 #define GPIO_SCL	27
 #define GPIO_SDA	26
-//corresponding RTX-IO
+//corresponding RTC-IO
 #define	RTC_IO_SCL	17
 #define RTC_IO_SDA	7
 
